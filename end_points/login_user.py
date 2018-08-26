@@ -11,4 +11,5 @@ def _create_user(username):
     try:
         session.commit()
     except IntegrityError:
-        return f'User: {username} already exists'
+        return f'User: {username} already exists', None
+    return None, None

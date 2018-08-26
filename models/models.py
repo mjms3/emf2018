@@ -13,7 +13,7 @@ class RequestToken(Base):
     __tablename__ = 'request_token'
 
     request_token_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('login_user.user_id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('login_user.login_user_id'), nullable=False)
     request_token = Column(String, unique=True, nullable=False)
     requested_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
