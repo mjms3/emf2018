@@ -21,6 +21,7 @@ style.set_background(ugfx.html_color(0x000000))
 ugfx.set_default_style(style)
 
 def render_splash_screen():
+    ugfx.clear(ugfx.html_color(0x000000))
     try:
         logo = http.get("https://i.imgur.com/0TjxEPs.png").raise_for_status().content
         ugfx.display_image(
@@ -53,6 +54,9 @@ def create_profile():
     contact = dialogs.prompt_text("How should your matches contact you? :P")
     imei = sim800.imei()
 
+    top_left_logo()
+    ugfx.text(5, 100, "Creating profile...", ugfx.BLACK)
+
     profile = {
         'unique_identifier': imei,
         'username': name,
@@ -75,17 +79,44 @@ def create_profile():
 
     return True
 
+
+def get_profile():
+    profile_json = database.get("tildr_profile")
+    if profile_json is None:
+        return None
+
+    profile = ujson.loads(profile_json)
+    return profile
+
+
+def top_left_logo():
+    ugfx.clear(ugfx.html_color(0x000000))
+    try:
+        logo = http.get("https://i.imgur.com/5HXmXBU.png").raise_for_status().content
+        ugfx.display_image(0, 5, bytearray(logo))
+    except:
+        pass
+
+
 def quit_loop():
     while True:
         if buttons.is_triggered(Buttons.BTN_Menu):
-            return
+            return False
 
 
 while running:
-    render_splash_screen()
-    if not run_splash_screen():
+
+    profile = get_profile()
+
+    if profile is None:
+        render_splash_screen()
+        if not run_splash_screen():
+            break
+        if not create_profile():
+            continue
+
+    top_left_logo()
+    if not quit_loop():
         break
-    if not create_profile():
-        continue
 
 app.restart_to_default()
