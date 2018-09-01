@@ -7,7 +7,8 @@ class LoginUser(Base):
     __tablename__ = 'login_user'
 
     login_user_id = Column(Integer,primary_key=True)
-    username = Column(String,unique=True, nullable=False)
+    username = Column(String, nullable=False)
+    unique_identifier = Column(String, nullable=False, unique=True)
     age = Column(Integer, nullable=False)
     tag_line = Column(String, nullable=False)
     temperature = Column(Numeric, nullable=True)
