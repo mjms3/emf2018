@@ -6,6 +6,7 @@ from models.models import LoginUser, Match
 
 row2dict = lambda r: {c.name: str(getattr(r, c.name)) for c in r.__table__.columns}
 
+
 def _create_user(data):
     session = _get_session()
     user = session.query(LoginUser).filter(LoginUser.unique_identifier == data['unique_identifier']).first()
@@ -22,23 +23,49 @@ def _create_user(data):
             return f'Missing required field', None
     return None, None
 
+
 def _get_user_other_than_named(current_id):
     session = _get_session()
     current_user = session.query(LoginUser).filter(LoginUser.unique_identifier == current_id).first()
 
-    user_to_return = session.query(LoginUser).outerjoin(Match, LoginUser.login_user_id==Match.user_2).filter(
+    user_to_return = session.query(LoginUser).outerjoin(Match,
+                                                        and_(LoginUser.login_user_id == Match.user_2,
+                                                             Match.status != 'matched')).filter(
         and_(LoginUser.unique_identifier != current_id,
-            Match.match_id == None)
+             Match.match_id == None)
     ).order_by(func.random()).first()
 
     if user_to_return is None:
         return 'No more users', None
 
     match = Match(user_1=current_user.login_user_id,
-                  user_2= user_to_return.login_user_id,
+                  user_2=user_to_return.login_user_id,
                   status='not_matched')
     session.add(match)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError as ex:
+        if ex.orig.pgcode == '23505':
+            session.rollback()
+        else:
+            raise
+
     user_as_dict = row2dict(user_to_return)
     user_as_dict.pop('login_user_id')
     return None, user_as_dict
+
+
+def _mark_as_matched(current_id, matched_with_user):
+    session = _get_session()
+    current_user = session.query(LoginUser).filter(LoginUser.unique_identifier == current_id).first()
+
+    matched_user = session.query(LoginUser).filter(LoginUser.unique_identifier == matched_with_user).first()
+
+    match = session.query(Match).filter(and_(Match.user_1 == current_user.login_user_id,
+                                             Match.user_2 == matched_user.login_user_id,
+                                             )).first()
+
+    match.status = 'matched'
+    session.add(match)
+    session.commit()
+    return None, None
