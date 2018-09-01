@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from end_points.access_layer import _get_session
@@ -21,7 +22,7 @@ def _create_user(data):
 
 def _get_user_other_than_named(current_id):
     session = _get_session()
-    user_to_return = session.query(LoginUser).filter(LoginUser.unique_identifier != current_id).first()
+    user_to_return = session.query(LoginUser).filter(LoginUser.unique_identifier != current_id).order_by(func.random()).first()
     user_as_dict = row2dict(user_to_return)
     user_as_dict.pop('login_user_id')
     return None, user_as_dict
