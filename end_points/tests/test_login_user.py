@@ -3,19 +3,21 @@ from unittest import TestCase
 from testfixtures import compare
 
 from end_points.access_layer import _get_session
-from end_points.login_user import _create_user, _get_user_other_than_named
-from models.models import LoginUser
+from end_points.login_user import _create_user, _get_user_other_than_named, row2dict
+from models.models import LoginUser, Match
 
 
 class TestLoginUser(TestCase):
 
-    def _clear_LoginUser_table(self):
+    def _clear_tables(self):
+        self.session.commit()
+        self.session.query(Match).delete()
         self.session.query(LoginUser).delete()
         self.session.commit()
 
     def setUp(self):
         self.session = _get_session()
-        self._clear_LoginUser_table()
+        self._clear_tables()
         self.user_data  = {
             'username': 'my_user_name',
             'unique_identifier': 'FOO',
@@ -27,7 +29,7 @@ class TestLoginUser(TestCase):
 
 
     def test_createUser(self):
-        self.addCleanup(self._clear_LoginUser_table)
+        self.addCleanup(self._clear_tables)
 
         error_message,result = _create_user(self.user_data)
 
@@ -37,7 +39,7 @@ class TestLoginUser(TestCase):
                 actual=[u.unique_identifier for u in self.session.query(LoginUser).all()])
 
     def test_createUser_whenMissingData(self):
-        self.addCleanup(self._clear_LoginUser_table)
+        self.addCleanup(self._clear_tables)
         self.user_data.pop('tag_line')
         error_message, result = _create_user(self.user_data)
 
@@ -45,7 +47,7 @@ class TestLoginUser(TestCase):
                 actual=(error_message,result))
 
     def test_createUser_whenUserAlreadyExists(self):
-        self.addCleanup(self._clear_LoginUser_table)
+        self.addCleanup(self._clear_tables)
 
         for _ in range(2):
             error_message, result = _create_user(self.user_data)
@@ -56,8 +58,8 @@ class TestLoginUser(TestCase):
         compare(expected=['FOO'],
                 actual=[u.unique_identifier for u in self.session.query(LoginUser).all()])
 
-    def test_getUserToDisplay(self):
-        self.addCleanup(self._clear_LoginUser_table)
+    def test_get_user_to_display(self):
+        self.addCleanup(self._clear_tables)
 
         _,_ = _create_user(self.user_data)
         current_user = self.user_data['unique_identifier']
@@ -71,3 +73,29 @@ class TestLoginUser(TestCase):
             self.user_data[f] = 'None'
         compare(expected=(None, self.user_data),
                 actual=(error_message,result))
+
+        compare(expected=['not_matched'],
+                actual = [r.status for r in self.session.query(Match).all()])
+
+    def test_get_user_to_display_when_no_user(self):
+        self.addCleanup(self._clear_tables)
+        error_message, result = _get_user_other_than_named('FOO')
+        compare(expected=('No more users', None),
+                actual=(error_message,result))
+
+    def test_get_user_to_display_when_already_seen_others(self):
+        self.addCleanup(self._clear_tables)
+
+        _,_ = _create_user(self.user_data)
+        current_user = self.user_data['unique_identifier']
+        self.user_data['unique_identifier'] = 'BAR'
+
+        _, _ = _create_user(self.user_data)
+
+        _, _ = _get_user_other_than_named(current_user)
+        error_message, result = _get_user_other_than_named(current_user)
+        compare(expected=('No more users', None),
+                actual=(error_message, result))
+
+
+
