@@ -16,6 +16,7 @@ application = Flask(__name__)
 
 @application.route('/create_user', methods=['POST'])
 def create_user():
+    _log.info('Request: %s\n%s', request, request.__dict__)
     data = request.json
     return _apply_end_point(_create_user, data)
 
