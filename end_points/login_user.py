@@ -23,8 +23,7 @@ def _get_user_other_than_named(current_id):
     session = _get_session()
     current_user = session.query(LoginUser).filter(LoginUser.unique_identifier == current_id).first()
 
-    user_to_return = session.query(LoginUser).outerjoin(Match, or_(LoginUser.login_user_id==Match.user_1,
-                                                                  LoginUser.login_user_id==Match.user_2)).filter(
+    user_to_return = session.query(LoginUser).outerjoin(Match, LoginUser.login_user_id==Match.user_2).filter(
         and_(LoginUser.unique_identifier != current_id,
             Match.match_id == None)
     ).order_by(func.random()).first()
