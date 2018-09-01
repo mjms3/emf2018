@@ -21,7 +21,7 @@ def _error_response(msg):
 
 def _apply_end_point(func, arg):
     try:
-        error_message, result = func(arg)
+        error_message, result = func(*arg)
         if error_message is None:
             return _success_response(result)
         elif isinstance(error_message,str):
