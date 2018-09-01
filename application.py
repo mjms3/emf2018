@@ -1,10 +1,9 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask
+from flask import Flask, request
 
 from end_points.login_user import _create_user
-from end_points.request_token import _request_token
 from end_points.response_helpers import _apply_end_point
 
 _log = logging.getLogger('')
@@ -15,14 +14,10 @@ handler.setFormatter(formatter)
 
 application = Flask(__name__)
 
-@application.route('/create_user/<username>')
-def create_user(username):
-    return _apply_end_point(_create_user, username)
-
-
-@application.route('/request_token/<username>')
-def generate_token(username):
-    return _apply_end_point(_request_token, username)
+@application.route('/create_user', methods=['POST'])
+def create_user():
+    data = request.json
+    return _apply_end_point(_create_user, data)
 
 if __name__ == "__main__":
     application.run()
