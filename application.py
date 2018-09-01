@@ -3,7 +3,7 @@ from logging.handlers import RotatingFileHandler
 
 from flask import Flask, request
 
-from end_points.login_user import _create_user
+from end_points.login_user import _create_user, _get_user_other_than_named
 from end_points.response_helpers import _apply_end_point
 
 _log = logging.getLogger('')
@@ -18,6 +18,10 @@ application = Flask(__name__)
 def create_user():
     data = request.json
     return _apply_end_point(_create_user, data)
+
+@application.route('/get_user/<username>', methods=['GET'])
+def get_user(username):
+    return _apply_end_point(_get_user_other_than_named, username)
 
 if __name__ == "__main__":
     application.run()
