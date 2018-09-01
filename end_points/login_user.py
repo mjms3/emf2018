@@ -8,8 +8,11 @@ row2dict = lambda r: {c.name: str(getattr(r, c.name)) for c in r.__table__.colum
 
 def _create_user(data):
     session = _get_session()
+    user = session.query(LoginUser).filter(LoginUser.unique_identifier == data['unique_identifier']).first()
+    if user is not None:
+        data['login_user_id'] = user.login_user_id
     user = LoginUser(**data)
-    session.add(user)
+    session.merge(user)
     try:
         session.commit()
     except IntegrityError as ex:

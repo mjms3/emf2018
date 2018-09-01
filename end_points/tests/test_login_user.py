@@ -38,6 +38,19 @@ class TestLoginUser(TestCase):
         compare(expected=['FOO'],
                 actual=[u.unique_identifier for u in self.session.query(LoginUser).all()])
 
+    def test_update_user(self):
+        self.addCleanup(self._clear_tables)
+
+        _,_ = _create_user(self.user_data)
+        self.user_data['tag_line'] = 'My new tag line'
+        error_message, result = _create_user(self.user_data)
+
+        compare(expected=(None, None),
+                actual=(error_message,result))
+        compare(expected=['My new tag line'],
+                actual=[u.tag_line for u in self.session.query(LoginUser).all()])
+
+
     def test_createUser_whenMissingData(self):
         self.addCleanup(self._clear_tables)
         self.user_data.pop('tag_line')
@@ -45,18 +58,6 @@ class TestLoginUser(TestCase):
 
         compare(expected=("Missing required field", None),
                 actual=(error_message,result))
-
-    def test_createUser_whenUserAlreadyExists(self):
-        self.addCleanup(self._clear_tables)
-
-        for _ in range(2):
-            error_message, result = _create_user(self.user_data)
-
-        compare(expected=('User already exists', None),
-                actual=(error_message,result))
-
-        compare(expected=['FOO'],
-                actual=[u.unique_identifier for u in self.session.query(LoginUser).all()])
 
     def test_get_user_to_display(self):
         self.addCleanup(self._clear_tables)
