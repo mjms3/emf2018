@@ -1,5 +1,6 @@
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, any_, not_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.testing import in_
 
 from end_points.access_layer import _get_session
 from models.models import LoginUser, Match
@@ -25,11 +26,13 @@ def _create_user(data):
 def _get_user_other_than_named(current_id):
     session = _get_session()
     current_user = session.query(LoginUser).filter(LoginUser.unique_identifier == current_id).first()
+    if current_user is None:
+        return  'No more users', None
+    matched_users = session.query(Match).filter(Match.user_1==current_user.login_user_id).all()
 
-    user_to_return = session.query(LoginUser).outerjoin(Match, LoginUser.login_user_id==Match.user_2).filter(
-        and_(LoginUser.unique_identifier != current_id,
-            Match.match_id == None)
-    ).order_by(func.random()).first()
+    invalid_user_ids = [m.user_2 for m in matched_users]+[current_user.login_user_id]
+
+    user_to_return = session.query(LoginUser).filter(~LoginUser.login_user_id.in_(invalid_user_ids)).order_by(func.random()).first()
 
     if user_to_return is None:
         return 'No more users', None

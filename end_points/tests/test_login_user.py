@@ -1,4 +1,5 @@
 from unittest import TestCase
+from unittest.mock import ANY
 
 from testfixtures import compare
 
@@ -73,7 +74,7 @@ class TestLoginUser(TestCase):
         for f in ('humidity','magnetic_flux','temperature'):
             self.user_data[f] = 'None'
         self.user_data.pop('unique_identifier')
-        
+
         compare(expected=(None, self.user_data),
                 actual=(error_message,result))
 
@@ -100,5 +101,23 @@ class TestLoginUser(TestCase):
         compare(expected=('No more users', None),
                 actual=(error_message, result))
 
+    def test_get_user_to_display_other_peoples_matches_dont_affect_yours(self):
+        unique_users = ('FOO', 'BAR', 'BAZ')
+        for unique_id in unique_users:
+            self.user_data['unique_identifier'] = unique_id
+            _,_ = _create_user(self.user_data)
+
+        for unique_user in unique_users:
+            for call in range(2):
+                error_message,result = _get_user_other_than_named(unique_user)
+                compare(expected=(None, ANY),
+                        actual=(error_message, result),
+                        prefix='User: %s, call: %s' % (unique_user,call) )
+        compare(expected=6, actual = len(self.session.query(Match).all()))
 
 
+        for unique_user in unique_users:
+            error_message,result = _get_user_other_than_named(unique_user)
+            compare(expected=('No more users', None),
+                    actual=(error_message, result),
+                    prefix='User: %s' % unique_user )
