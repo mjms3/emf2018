@@ -1,9 +1,10 @@
 from unittest import TestCase
+from unittest.mock import ANY
 
 from testfixtures import compare
 
 from end_points.access_layer import _get_session
-from end_points.login_user import _create_user, _get_user_other_than_named, row2dict, _mark_as_matched
+from end_points.login_user import _create_user, _get_user_other_than_named, row2dict
 from models.models import LoginUser, Match
 
 
@@ -26,11 +27,11 @@ class TestLoginUser(TestCase):
             'looking_for' : 'looking_for',
             'contact': 'contact'
         }
-        self.addCleanup(self._clear_tables)
-
 
 
     def test_createUser(self):
+        self.addCleanup(self._clear_tables)
+
         error_message,result = _create_user(self.user_data)
 
         compare(expected=(None, None),
@@ -39,6 +40,8 @@ class TestLoginUser(TestCase):
                 actual=[u.unique_identifier for u in self.session.query(LoginUser).all()])
 
     def test_update_user(self):
+        self.addCleanup(self._clear_tables)
+
         _,_ = _create_user(self.user_data)
         self.user_data['tag_line'] = 'My new tag line'
         error_message, result = _create_user(self.user_data)
@@ -50,6 +53,7 @@ class TestLoginUser(TestCase):
 
 
     def test_createUser_whenMissingData(self):
+        self.addCleanup(self._clear_tables)
         self.user_data.pop('tag_line')
         error_message, result = _create_user(self.user_data)
 
@@ -57,6 +61,8 @@ class TestLoginUser(TestCase):
                 actual=(error_message,result))
 
     def test_get_user_to_display(self):
+        self.addCleanup(self._clear_tables)
+
         _,_ = _create_user(self.user_data)
         current_user = self.user_data['unique_identifier']
         self.user_data['unique_identifier'] = 'BAR'
@@ -67,6 +73,8 @@ class TestLoginUser(TestCase):
 
         for f in ('humidity','magnetic_flux','temperature'):
             self.user_data[f] = 'None'
+        self.user_data.pop('unique_identifier')
+
         compare(expected=(None, self.user_data),
                 actual=(error_message,result))
 
@@ -74,11 +82,14 @@ class TestLoginUser(TestCase):
                 actual = [r.status for r in self.session.query(Match).all()])
 
     def test_get_user_to_display_when_no_user(self):
+        self.addCleanup(self._clear_tables)
         error_message, result = _get_user_other_than_named('FOO')
         compare(expected=('No more users', None),
                 actual=(error_message,result))
 
     def test_get_user_to_display_when_already_seen_others(self):
+        self.addCleanup(self._clear_tables)
+
         _,_ = _create_user(self.user_data)
         current_user = self.user_data['unique_identifier']
         self.user_data['unique_identifier'] = 'BAR'
@@ -90,21 +101,23 @@ class TestLoginUser(TestCase):
         compare(expected=('No more users', None),
                 actual=(error_message, result))
 
-    def test_mark_as_matched(self):
+    def test_get_user_to_display_other_peoples_matches_dont_affect_yours(self):
+        unique_users = ('FOO', 'BAR', 'BAZ')
+        for unique_id in unique_users:
+            self.user_data['unique_identifier'] = unique_id
+            _,_ = _create_user(self.user_data)
 
-        _,_ = _create_user(self.user_data)
-        current_user = self.user_data['unique_identifier']
-        self.user_data['unique_identifier'] = 'BAR'
+        for unique_user in unique_users:
+            for call in range(2):
+                error_message,result = _get_user_other_than_named(unique_user)
+                compare(expected=(None, ANY),
+                        actual=(error_message, result),
+                        prefix='User: %s, call: %s' % (unique_user,call) )
+        compare(expected=6, actual = len(self.session.query(Match).all()))
 
-        _, _ = _create_user(self.user_data)
-        _, _ = _get_user_other_than_named(current_user)
 
-        _mark_as_matched(current_user,self.user_data['unique_identifier'])
-
-        error_message, result = _get_user_other_than_named(current_user)
-
-        for f in ('humidity','magnetic_flux','temperature'):
-            self.user_data[f] = 'None'
-        compare(expected=(None, self.user_data),
-                actual=(error_message,result))
-
+        for unique_user in unique_users:
+            error_message,result = _get_user_other_than_named(unique_user)
+            compare(expected=('No more users', None),
+                    actual=(error_message, result),
+                    prefix='User: %s' % unique_user )
