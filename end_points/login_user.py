@@ -41,4 +41,5 @@ def _get_user_other_than_named(current_id):
     session.commit()
     user_as_dict = row2dict(user_to_return)
     user_as_dict.pop('login_user_id')
+    user_as_dict.pop('unique_identifier')
     return None, user_as_dict

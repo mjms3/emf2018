@@ -72,6 +72,8 @@ class TestLoginUser(TestCase):
 
         for f in ('humidity','magnetic_flux','temperature'):
             self.user_data[f] = 'None'
+        self.user_data.pop('unique_identifier')
+        
         compare(expected=(None, self.user_data),
                 actual=(error_message,result))
 
